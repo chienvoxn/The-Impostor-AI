@@ -1,7 +1,20 @@
+# Python
 .venv/
-data/
-.mypy_cache/
-.pytest_cache/
 __pycache__/
-.ipynb_checkpoints/
-artifacts/models/
+*.py[cod]
+.pytest_cache/
+
+# Local datasets
+data/
+
+# Training outputs
+outputs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Kaggle credentials and secrets
+kaggle.json
+.env
+.env.*
