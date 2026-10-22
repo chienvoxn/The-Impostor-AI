@@ -3,6 +3,9 @@ import torch.nn.functional as F
 
 from tqdm.auto import tqdm
 
+import pandas as pd
+from sklearn.metrics import f1_score
+
 
 def train_one_epoch(
     model,
@@ -146,3 +149,47 @@ def validate_one_epoch(
         probabilities,
         labels,
     )
+
+def evaluate_pair_predictions(valid_df, probabilities, dev_df):
+    predictions = valid_df[
+        ["pair_id", "position"]
+    ].copy()
+
+    if len(predictions) != len(probabilities):
+        raise ValueError("Prediction count mismatch")
+
+    predictions["fake_probability"] = probabilities
+
+    pair_probs = predictions.pivot(
+        index="pair_id",
+        columns="position",
+        values="fake_probability",
+    )
+
+    targets = (
+        dev_df.set_index("pair_id")["fake_position"]
+        .astype(int)
+        .rename("true_fake_position")
+    )
+
+    results = pair_probs.rename(
+        columns={
+            0: "prob_fake_0",
+            1: "prob_fake_1",
+        }
+    ).join(targets, how="inner", validate="one_to_one")
+
+    if results.isna().any().any():
+        raise ValueError("Missing pair predictions or labels")
+
+    results["pred_fake_position"] = (
+        results["prob_fake_1"] > results["prob_fake_0"]
+    ).astype(int)
+
+    score = f1_score(
+        results["true_fake_position"],
+        results["pred_fake_position"],
+        average="macro",
+    )
+
+    return score, results.reset_index()
